@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/css/font-awesome.min.css">
+<link rel="stylesheet" href="/css/bootstrap.min.css">
+<link rel="stylesheet" href="/css/bootstrap.min.css">
+<script src="/js/jquery-1.12.3.min.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script src="/js/angular.min.js"></script>
+<title>Node.js + MongoDB Board</title>
+<style>
+	.jumbotron {
+		background-color:	#396039;
+	}
+	.row-subjet {
+		background-color:#afcfaf;
+		font-weight: bold;
+		font-size:14pt;
+		border-top:1px solid;
+		border-bottom:1px solid;
+	}
+	.row-content {
+		font-size:14pt;
+		border-bottom:1px dotted;
+	}
+	.row-footer {
+		font-size:14pt;
+		font-weight: bold;
+		border-top:1px solid;
+	}
+	.modal-header {
+		background-color:	#396039;
+	}
+</style>
+<script>
+	$(document).ready(function(){
+		$('#bt_regist').click(function(){
+			/*
+			//If you want send only text.
+			$.ajax({
+				type:"POST",
+				url:"/board",
+				data:{
+					title:form1.title.value,
+					writer:form1.writer.value,
+					content:form1.content.value
+				},
+				success: function(msg){
+					alert(msg);
+					$('#writeForm').modal('toggle');
+				}
+			});
+			*/
+			var formData = new FormData($("#form1")[0]);
+
+			$.ajax({
+					url: "/board",
+					type: 'POST',
+					data: formData,
+					async: true,
+					success: function (data) {
+							alert(data);
+							location.reload();
+					},
+					cache: false,
+					contentType: false,
+					processData: false
+			});
+		});
+		
+	});
+
+	function viewDetail(id){
+		$.ajax({
+			type:"GET",
+			url:"/board/id/"+id,
+			success: function(board){
+				form2.title.value = board.title;
+				form2.writer.value = board.writer;
+				form2.content.value = board.content;
+				if( board.photo != null){
+					var mimetype = board.photo.mimetype;
+				
+					form2.myFile.src = "/data/"+board.photo.filename+"."+mimetype.substring(mimetype.lastIndexOf('/')+1,mimetype.length);
+				}
+				$('#detailForm').modal('toggle');
+			}
+		});
+	}
+	
+</script>
+</head>
+<body ng-app="">
+	<div class="container">
+		<div class="jumbotron">
+			<h1>Node.js + MongoDB Board</h1>
+		</div>
+		<div class="row row-subjet">
+			<div class="col-sm-2">번호</div>
+			<div class="col-sm-6">제목</div>
+			<div class="col-sm-2">작성자</div>
+			<div class="col-sm-2">등록날짜</div>
+		</div>
+		<%
+		var num = pb.num;
+		var curPos = pb.curPos;
+		for(var i=0; i<pb.pageSize; i++){
+			if(num--<1) break;
+			
+			var board = boards[curPos++];
+			var regdate = board.regdate;
+		%>
+		<div class="row row-content">
+			<a href="javascript: viewDetail('<%=board._id%>')">
+			<div class="col-sm-2"><%=num+1%></div>
+			<div class="col-sm-6"><%=board.title%></div>
+			<div class="col-sm-2"><%=board.writer%></div>
+			<div class="col-sm-2"><%=(regdate.getYear()+1900)+"."+(regdate.getMonth()+1) +"."+regdate.getDate()%></div>
+			</a>
+		</div>
+		<%
+		}
+		%>
+
+		<!-- 페이징 처리 -->
+	<div class="row" style="text-align:center">
+		<div class="col-sm-8 col-sm-offset-2">
+		<ul class="pagination pagination-lg">
+			<%if(pb.firstPage>1){ %>
+			<li><a href="/board/<%=pb.firstPage-1 %>">◀</a></li>
+			<%} %>
+			<%for(var i=pb.firstPage;i<pb.lastPage; i++){ %>
+			<% if(i>pb.totalPage) break; %>
+			<li><a href="/board/<%=i %>"><%=i %></a></li>
+		 <%} %>
+		 <%if(pb.lastPage<=pb.totalPage){ %>
+			<li><a href="/board/<%=pb.lastPage+1 %>">▶</a></li>
+			<%} %>
+		</ul>
+		</div>
+		<div class="col-sm-2">
+			<ul class="pager">
+				<li><a data-toggle="modal" href="#writeForm">글쓰기</a></li>
+			</ul>
+		</div>
+	</div>
+	<!-- //페이징처리 -->
+	
+	<!-- Modal regist -->
+  <div class="modal fade" id="writeForm" role="dialog">
+    <div class="modal-dialog">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title"><h3><strong>글쓰기</strong></h3></h4>
+        </div>
+        <div class="modal-body">
+          <form role="form" name="form1" id="form1" enctype="multipart/form-data">
+						<div class="form-group">
+							<label for="title">제목:</label>
+							<input type="text" class="form-control" id="title" name="title">
+							<label for="writer">작성자:</label>
+							<input type="text" class="form-control" id="writer" name="writer">
+						</div>
+						<div class="form-group">
+							<label for="content">내용:</label>
+							<textarea class="form-control" rows="5" id="content" name="content"></textarea>
+						</div>
+						<div class="form-group">
+							<label for="myFile">파일첨부:</label>
+							<input type="file" id="myFile" name="myFile">
+						</div>
+					</form>
+        </div>
+        <div class="modal-footer">
+					<button type="button" class="btn btn-primary" data-dismiss="modal" id="bt_regist">Regist</button>
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+      
+    </div>
+		
+  </div>
+	
+	<!-- Modal detail -->
+  <div class="modal fade" id="detailForm" role="dialog">
+    <div class="modal-dialog">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title"><h3><strong>상세보기</strong></h3></h4>
+        </div>
+        <div class="modal-body">
+          <form role="form" name="form2" id="form2" enctype="multipart/form-data">
+						<div class="form-group">
+							<label for="title">제목:</label>
+							<input type="text" class="form-control" id="title" name="title" readonly>
+							<label for="writer">작성자:</label>
+							<input type="text" class="form-control" id="writer" name="writer" readonly>
+						</div>
+						<div class="form-group">
+							<label for="content">내용:</label>
+							<textarea class="form-control" rows="5" id="content" name="content" readonly></textarea>
+						</div>
+						<div class="form-group">
+							<label for="myFile">사진:</label>
+							<img src="" id="myFile"  class="img-responsive" alt="Cinque Terre" name="myFile">
+						</div>
+					</form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+		
+  </div>
+</body>
+</html>
